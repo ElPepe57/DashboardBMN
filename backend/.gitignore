@@ -1,0 +1,8 @@
+# backend/.gitignore
+
+# Ignorar el archivo de variables de entorno y los módulos de node
+.env
+node_modules
+
+# Ignorar las credenciales de la cuenta de servicio
+credentials.json
