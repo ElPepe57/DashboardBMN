@@ -20,7 +20,8 @@ import {
   Target,
   BarChart,
   AlertTriangle,
-  Minus
+  Minus,
+  Award
 } from 'lucide-react';
 import { Line, Doughnut, Pie, Bar } from 'react-chartjs-2';
 import {
@@ -34,7 +35,7 @@ import {
   Legend,
   ArcElement,
   BarElement,
-  scales
+  RadialLinearScale // ✅ AGREGADO: Necesario para gráficos Radar
 } from 'chart.js';
 
 // Import additional views
@@ -48,6 +49,7 @@ import InventoryView from '../components/InventoryView';
 import EfficiencyView from '../components/EfficiencyView';
 import LogisticsView from '../components/LogisticsView';
 
+// ✅ REGISTRAR TODAS LAS ESCALAS NECESARIAS
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -57,7 +59,8 @@ ChartJS.register(
   Tooltip,
   Legend,
   ArcElement,
-  BarElement
+  BarElement,
+  RadialLinearScale // ✅ CRÍTICO: Para gráficos de radar
 );
 
 const Dashboard = () => {
@@ -96,6 +99,11 @@ const Dashboard = () => {
       
       const data = await response.json();
       console.log('✅ Datos cargados desde Google Sheets:', data);
+      
+      window.lastDashboardData = {
+        ventasPorCategoria: data.ventasPorCategoria || {},
+        ventasDetalladas: data.ventasDetalladas || []
+      };
       
       setSheetsData({
         realTimeData: data,
@@ -160,23 +168,30 @@ const Dashboard = () => {
 
   const formatCurrency = (value) => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(value);
 
-  // ✅ PROCESS DATA CORREGIDA CON DATOS DE INVERSIÓN REAL Y GVD+GAD
   const processData = () => {
     console.log('🔍 Dashboard processData - sheetsData:', sheetsData);
     
     if (sheetsData.realTimeData) {
       const realData = sheetsData.realTimeData;
       
-      // ✅ DEBUG CLAVE: Verificar qué datos están llegando
       console.log('📊 realData completo:', realData);
       console.log('📈 monthlyChartData:', realData.monthlyChartData);
+      console.log('💰 ventasPorCategoria:', realData.ventasPorCategoria);
+      console.log('📝 ventasDetalladas:', realData.ventasDetalladas);
+      console.log('💰 rentabilidadPorSKU:', realData.rentabilidadPorSKU);
+      console.log('💰 rentabilidadPorProducto:', realData.rentabilidadPorProducto);
       console.log('🔢 totalInvestment:', realData.totalInvestment);
-      console.log('💰 totalRealInvestment:', realData.totalRealInvestment); // ✅ NUEVO
-      console.log('📋 investmentByCategory:', realData.investmentByCategory); // ✅ NUEVO
+      console.log('💰 totalRealInvestment:', realData.totalRealInvestment);
+      console.log('📋 investmentByCategory:', realData.investmentByCategory);
       console.log('📋 debugInfo:', realData.debugInfo);
       
+      console.log('🚚 logisticsDataBySKU:', realData.logisticsDataBySKU);
+      console.log('🚚 logisticsStats:', realData.logisticsStats);
+      console.log('🚚 courierPerformance:', realData.courierPerformance);
+      console.log('🚚 courierEfficiency:', realData.courierEfficiency);
+      console.log('🎯 courierOptimalReport:', realData.courierOptimalReport);
+      
       const result = {
-        // ✅ DATOS BÁSICOS EXISTENTES
         processedSales: realData.monthlyChartData || [],
         totalRevenue: realData.totalRevenue || 0,
         ingresosBrutos: realData.ingresosBrutos || 0,
@@ -189,27 +204,48 @@ const Dashboard = () => {
         totalInvestment: realData.totalInvestment || 0,
         roi: realData.roi || 0,
         ventasPorCanal: realData.ventasPorCanal || {},
+        
+        ventasPorCategoria: realData.ventasPorCategoria || {},
+        ventasDetalladas: realData.ventasDetalladas || [],
+        
         purchaseData: {},
         
-        // ✅ DATOS EXISTENTES
         monthlyChartData: realData.monthlyChartData || [],
         debugInfo: realData.debugInfo || {},
         expenseDetails: realData.expenseDetails || {},
         
-        // ✅ NUEVOS DATOS DE INVERSIÓN REAL - AGREGAR ESTAS LÍNEAS
         totalRealInvestment: realData.totalRealInvestment || 0,
         investmentByCategory: realData.investmentByCategory || {},
         realInvestmentData: realData.realInvestmentData || {},
         realROI: realData.realROI || 0,
-        totalExpenses: realData.totalExpenses || 0, // ✅ PARA InvestmentView
+        totalExpenses: realData.totalExpenses || 0,
         
-        // ✅ MANTENER rawData por compatibilidad
+        rentabilidadPorSKU: realData.rentabilidadPorSKU || {},
+        inventoryBySKU: realData.inventoryBySKU || {},
+        comprasBySKU: realData.comprasBySKU || {},
+        
+        rentabilidadPorProducto: realData.rentabilidadPorProducto || {},
+        inventoryByProducto: realData.inventoryByProducto || {},
+        comprasByProducto: realData.comprasByProducto || {},
+        
+        logisticsDataBySKU: realData.logisticsDataBySKU || {},
+        logisticsStats: realData.logisticsStats || {},
+        courierPerformance: realData.courierPerformance || {},
+        courierEfficiency: realData.courierEfficiency || {},
+        courierOptimalReport: realData.courierOptimalReport || {},
+        
         rawData: realData
       };
       
       console.log('✅ Datos procesados para frontend:', result);
-      console.log('📈 monthlyChartData en result:', result.monthlyChartData);
-      console.log('💰 totalRealInvestment en result:', result.totalRealInvestment); // ✅ NUEVO DEBUG
+      console.log('📊 ventasPorCategoria en result:', result.ventasPorCategoria);
+      console.log('📝 ventasDetalladas en result:', result.ventasDetalladas.length);
+      console.log('💰 rentabilidadPorSKU en result:', Object.keys(result.rentabilidadPorSKU).length);
+      console.log('💰 rentabilidadPorProducto en result:', Object.keys(result.rentabilidadPorProducto).length);
+      console.log('📦 inventoryByProducto en result:', Object.keys(result.inventoryByProducto).length);
+      console.log('🚚 logisticsDataBySKU en result:', Object.keys(result.logisticsDataBySKU).length);
+      console.log('🚚 courierEfficiency en result:', Object.keys(result.courierEfficiency).length);
+      console.log('🎯 courierOptimalReport en result:', result.courierOptimalReport.courierOptimo || 'No disponible');
       
       return result;
     }
@@ -251,11 +287,28 @@ const Dashboard = () => {
       totalInvestment,
       roi: 0,
       ventasPorCanal: {},
+      
+      ventasPorCategoria: {},
+      ventasDetalladas: [],
+      
+      rentabilidadPorSKU: {},
+      inventoryBySKU: {},
+      comprasBySKU: {},
+      
+      rentabilidadPorProducto: {},
+      inventoryByProducto: {},
+      comprasByProducto: {},
+      
+      logisticsDataBySKU: {},
+      logisticsStats: {},
+      courierPerformance: {},
+      courierEfficiency: {},
+      courierOptimalReport: {},
+      
       purchaseData: {},
       monthlyChartData: [],
       debugInfo: {},
       expenseDetails: {},
-      // ✅ FALLBACK PARA DATOS DE INVERSIÓN REAL
       totalRealInvestment: 0,
       investmentByCategory: {},
       realInvestmentData: {},
@@ -267,10 +320,13 @@ const Dashboard = () => {
 
   const allData = processData();
 
-  // ✅ DEBUG FINAL: Verificar qué se está pasando a los componentes
   console.log('🎯 allData final que se pasa a componentes:', allData);
+  console.log('💰 Datos de rentabilidad SKU disponibles:', Object.keys(allData.rentabilidadPorSKU).length, 'SKUs');
+  console.log('💰 Datos de rentabilidad Producto disponibles:', Object.keys(allData.rentabilidadPorProducto).length, 'productos');
+  console.log('🚚 Datos de logística disponibles:', Object.keys(allData.logisticsDataBySKU).length, 'SKUs');
+  console.log('🚚 Datos de courier efficiency disponibles:', Object.keys(allData.courierEfficiency).length, 'couriers');
+  console.log('🎯 Courier óptimo disponible:', allData.courierOptimalReport?.courierOptimo || 'No configurado');
 
-  // View definitions
   const viewDefinitions = {
     'Dashboard': { title: 'Dashboard', icon: LayoutDashboard, category: 'Resumen General' },
     'Financiero': { title: 'Estado de Resultados', icon: Landmark, category: 'Análisis Financiero' },
@@ -281,7 +337,7 @@ const Dashboard = () => {
     'Inventario': { title: 'Inventario ABC', icon: Package, category: 'Análisis de Productos' },
     'Eficiencia': { title: 'Alertas y Eficiencia', icon: ShieldAlert, category: 'Análisis Operativo' },
     'Ventas': { title: 'Detalle de Ventas', icon: ShoppingCart, category: 'Análisis Operativo' },
-    'Logistica': { title: 'Logística', icon: Truck, category: 'Análisis Operativo' }
+    'Logistica': { title: 'Logística Optimizada', icon: Truck, category: 'Análisis Operativo' }
   };
 
   const navStructure = {
@@ -291,7 +347,6 @@ const Dashboard = () => {
     'Análisis Operativo': ['Eficiencia', 'Ventas', 'Logistica']
   };
 
-  // KPI Card Component
   const KPICard = ({ title, value, icon: Icon, color, subtitle }) => (
     <div className="bg-white p-4 rounded-2xl shadow-lg flex items-center transition-transform transform hover:scale-105">
       <div className={`mr-3 p-2 rounded-full ${color}`}>
@@ -305,7 +360,6 @@ const Dashboard = () => {
     </div>
   );
 
-  // Componente de estado de carga
   const LoadingState = () => (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
@@ -315,7 +369,6 @@ const Dashboard = () => {
     </div>
   );
 
-  // Componente de error con botón de refresh
   const ErrorState = () => (
     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-6">
       <div className="flex">
@@ -341,7 +394,6 @@ const Dashboard = () => {
     </div>
   );
 
-  // Dashboard Content
   const renderDashboardContent = () => {
     const { 
       ingresosBrutos, 
@@ -352,10 +404,15 @@ const Dashboard = () => {
       totalGad, 
       operatingProfit, 
       roi,
-      ventasPorCanal 
+      ventasPorCanal,
+      ventasPorCategoria,
+      rentabilidadPorSKU,
+      rentabilidadPorProducto,
+      logisticsDataBySKU,
+      courierEfficiency,
+      courierOptimalReport
     } = allData;
     
-    // KPIs CON DESCUENTOS INCLUIDOS
     const kpis = [
       { 
         title: 'Ingresos Brutos', 
@@ -405,10 +462,18 @@ const Dashboard = () => {
         icon: TrendingUp, 
         color: roi >= 0 ? 'bg-green-600' : 'bg-red-600',
         subtitle: 'Retorno de inversión'
+      },
+      { 
+        title: 'Courier Óptimo', 
+        value: courierOptimalReport?.courierOptimo || 'No config.', 
+        icon: Award, 
+        color: courierOptimalReport?.courierOptimo ? 'bg-yellow-500' : 'bg-gray-400',
+        subtitle: courierOptimalReport?.datosOptimo ? 
+          `Score: ${courierOptimalReport.datosOptimo.scoreEficienciaTotal?.toFixed(1)}/100` : 
+          'Configure logística'
       }
     ];
 
-    // Datos para gráficos
     let financialsChartData, salesChannelChartData;
     
     if (sheetsData.realTimeData && sheetsData.realTimeData.monthlyChartData) {
@@ -446,7 +511,6 @@ const Dashboard = () => {
         }]
       };
     } else {
-      // Fallback a datos mock
       const { processedSales } = allData;
       const salesByChannel = processedSales.reduce((acc, sale) => {
         acc[sale.CANAL_DE_VENTA] = (acc[sale.CANAL_DE_VENTA] || 0) + sale.TOTAL_VENTA;
@@ -480,7 +544,38 @@ const Dashboard = () => {
       <div>
         {error && <ErrorState />}
         
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3 mb-8">
+        {Object.keys(ventasPorCategoria).length > 0 && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+              <div>
+                <p className="font-semibold text-green-800 text-sm">
+                  📊 Análisis Completo Habilitado con Logística Optimizada
+                </p>
+                <p className="text-green-700 text-xs mt-1">
+                  {Object.keys(ventasPorCategoria).length} categorías: {Object.keys(ventasPorCategoria).join(', ')}
+                  {Object.keys(rentabilidadPorSKU).length > 0 && 
+                    ` • ${Object.keys(rentabilidadPorSKU).length} SKUs con datos de rentabilidad`
+                  }
+                  {Object.keys(rentabilidadPorProducto).length > 0 && 
+                    ` • ${Object.keys(rentabilidadPorProducto).length} productos agrupados`
+                  }
+                  {Object.keys(logisticsDataBySKU).length > 0 && 
+                    ` • ${Object.keys(logisticsDataBySKU).length} SKUs con datos de logística`
+                  }
+                  {Object.keys(courierEfficiency).length > 0 && 
+                    ` • ${Object.keys(courierEfficiency).length} couriers con análisis de eficiencia optimizada`
+                  }
+                  {courierOptimalReport?.courierOptimo && 
+                    ` • Courier óptimo: ${courierOptimalReport.courierOptimo} (Score: ${courierOptimalReport.datosOptimo?.scoreEficienciaTotal?.toFixed(1)}/100)`
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-3 mb-8">
           {kpis.map((kpi, index) => (
             <KPICard key={index} {...kpi} />
           ))}
@@ -539,10 +634,69 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {courierOptimalReport?.courierOptimo && (
+          <div className="mt-8 bg-gradient-to-r from-yellow-50 to-orange-50 p-6 rounded-2xl border border-yellow-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 flex items-center">
+                  <Award className="h-6 w-6 text-yellow-500 mr-2" />
+                  Courier Óptimo Identificado
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Análisis basado en velocidad, eficiencia de costos, capacidad de valor, volumen y consistencia
+                </p>
+              </div>
+              <button
+                onClick={() => setCurrentView('Logistica')}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                Ver Análisis Completo
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-xs text-gray-500">Courier Óptimo</p>
+                <p className="text-lg font-bold text-gray-800">{courierOptimalReport.courierOptimo}</p>
+                <p className="text-xs text-gray-400">{courierOptimalReport.datosOptimo?.clasificacion}</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-xs text-gray-500">Score Total</p>
+                <p className="text-lg font-bold text-yellow-600">
+                  {courierOptimalReport.datosOptimo?.scoreEficienciaTotal?.toFixed(1)}/100
+                </p>
+                <p className="text-xs text-gray-400">Eficiencia general</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-xs text-gray-500">Tiempo Promedio</p>
+                <p className="text-lg font-bold text-blue-600">
+                  {courierOptimalReport.datosOptimo?.tiempoPromedioTraida?.toFixed(1)} días
+                </p>
+                <p className="text-xs text-gray-400">Traída courier</p>
+              </div>
+              <div className="bg-white p-4 rounded-lg">
+                <p className="text-xs text-gray-500">Eficiencia Costos</p>
+                <p className="text-lg font-bold text-green-600">
+                  {courierOptimalReport.datosOptimo?.ratioTarifaValorPromedio?.toFixed(1)}%
+                </p>
+                <p className="text-xs text-gray-400">Tarifa vs Valor</p>
+              </div>
+            </div>
+            
+            {courierOptimalReport.analisisComparativo?.ventajaSobreSegundo > 0 && (
+              <div className="mt-3 p-3 bg-green-100 rounded-lg">
+                <p className="text-sm text-green-800">
+                  <strong>Ventaja competitiva:</strong> {courierOptimalReport.analisisComparativo.ventajaSobreSegundo} puntos sobre el segundo mejor courier
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
             {sheetsData.realTimeData ? 
-              `📊 Datos actualizados desde Google Sheets - Ingresos: ${formatCurrency(totalRevenue)}` :
+              `📊 Datos actualizados desde Google Sheets - Ingresos: ${formatCurrency(totalRevenue)} • Categorías: ${Object.keys(ventasPorCategoria).length} • SKUs: ${Object.keys(rentabilidadPorSKU).length} • Productos: ${Object.keys(rentabilidadPorProducto).length} • Logística: ${Object.keys(logisticsDataBySKU).length} SKUs${courierOptimalReport?.courierOptimo ? ` • Courier óptimo: ${courierOptimalReport.courierOptimo}` : ''}` :
               '📋 Mostrando datos de demostración'
             }
           </p>
@@ -606,7 +760,6 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-slate-100 font-inter">
-      {/* Sidebar */}
       <div className={`bg-white shadow-xl transition-all duration-300 ${sidebarCollapsed ? 'w-20' : 'w-64'} flex flex-col`}>
         <div className="flex items-center justify-between p-4 h-16 border-b">
           <div className={`flex items-center overflow-hidden transition-opacity duration-300 ${sidebarCollapsed ? 'opacity-0' : ''}`}>
@@ -653,6 +806,9 @@ const Dashboard = () => {
                         >
                           <IconComponent className="h-6 w-6" />
                           <span className={`ml-4 ${sidebarCollapsed ? 'hidden' : ''}`}>{view.title}</span>
+                          {viewName === 'Logistica' && allData.courierOptimalReport?.courierOptimo && !sidebarCollapsed && (
+                            <Award className="h-4 w-4 text-yellow-400 ml-auto" />
+                          )}
                         </button>
                       </li>
                     );
@@ -671,13 +827,23 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto">
         <header className="mb-8">
           <h2 className="text-3xl font-extrabold text-gray-800 tracking-tight">
             {viewDefinitions[currentView].title}
+            {currentView === 'Logistica' && allData.courierOptimalReport?.courierOptimo && (
+              <span className="ml-3 inline-flex items-center px-3 py-1 rounded-full text-sm bg-yellow-100 text-yellow-800">
+                <Award className="h-4 w-4 mr-1" />
+                Optimizado
+              </span>
+            )}
           </h2>
-          <p className="text-gray-500 mt-1">Análisis profundo para decisiones inteligentes.</p>
+          <p className="text-gray-500 mt-1">
+            {currentView === 'Logistica' ? 
+              'Análisis optimizado de courier con identificación automática del más eficiente.' :
+              'Análisis profundo para decisiones inteligentes.'
+            }
+          </p>
         </header>
         
         <div>

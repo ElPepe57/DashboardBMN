@@ -4,26 +4,35 @@ import { Doughnut } from 'react-chartjs-2';
 const PortfolioView = ({ allData, formatCurrency }) => {
   const { totalRevenue, grossProfit } = allData;
 
-  // Usar datos reales del backend si están disponibles
-  const ventasPorCategoria = allData.processedSales?.length > 0 && allData.processedSales[0].ventasPorCategoria ? 
-    allData.processedSales[0].ventasPorCategoria : 
-    (allData.rawData?.ventasPorCategoria || {});
+  console.log('🔍 PortfolioView - allData recibido:', allData);
+  console.log('📊 ventasPorCategoria:', allData.ventasPorCategoria);
+  console.log('📝 ventasDetalladas:', allData.ventasDetalladas);
 
-  // Si no hay datos del backend, usar estructura de sheetsData
-  const realVentasPorCategoria = window.lastDashboardData?.ventasPorCategoria || ventasPorCategoria;
+  // ✅ USAR DIRECTAMENTE LOS DATOS DEL BACKEND
+  const ventasPorCategoria = allData.ventasPorCategoria || {};
+  const ventasDetalladas = allData.ventasDetalladas || [];
 
-  // Calcular datos de portfolio
-  const portfolioData = Object.entries(realVentasPorCategoria).map(([categoria, revenue]) => {
+  console.log('📈 ventasPorCategoria final:', ventasPorCategoria);
+  console.log('📝 ventasDetalladas final:', ventasDetalladas.length);
+
+  // ✅ CALCULAR DATOS DE PORTFOLIO CON DATOS REALES
+  const portfolioData = Object.entries(ventasPorCategoria).map(([categoria, revenue]) => {
     const revenueMix = totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0;
     
-    // Calcular utilidad por categoría basada en las ventas detalladas
-    const ventasDetalladas = window.lastDashboardData?.ventasDetalladas || [];
+    // ✅ CALCULAR UTILIDAD POR CATEGORÍA USANDO VENTAS DETALLADAS
     const utilidadCategoria = ventasDetalladas
       .filter(venta => venta.categoria === categoria)
-      .reduce((sum, venta) => sum + venta.utilidad, 0);
+      .reduce((sum, venta) => sum + (venta.utilidad || 0), 0);
     
     const profitMix = grossProfit > 0 ? (utilidadCategoria / grossProfit) * 100 : 0;
     const margin = revenue > 0 ? (utilidadCategoria / revenue) * 100 : 0;
+
+    console.log(`📊 Categoría ${categoria}:`, {
+      revenue,
+      utilidadCategoria,
+      revenueMix: revenueMix.toFixed(1),
+      margin: margin.toFixed(1)
+    });
 
     return {
       categoria,
@@ -34,6 +43,30 @@ const PortfolioView = ({ allData, formatCurrency }) => {
       margin
     };
   }).sort((a, b) => b.revenue - a.revenue);
+
+  console.log('📈 portfolioData procesado:', portfolioData);
+
+  // ✅ VERIFICAR SI HAY DATOS DISPONIBLES
+  if (portfolioData.length === 0) {
+    return (
+      <div className="bg-white p-6 rounded-2xl shadow-lg">
+        <h3 className="text-xl font-bold text-gray-800 mb-4">Análisis de Cartera por Categoría</h3>
+        <div className="text-center py-12">
+          <div className="text-gray-400 text-6xl mb-4">📊</div>
+          <h4 className="text-lg font-semibold text-gray-600 mb-2">No hay datos de categorías disponibles</h4>
+          <p className="text-gray-500 text-sm max-w-md mx-auto">
+            Verifica que la columna E (CATEGORIA) de la hoja "VENTAS" contenga datos válidos. 
+            Las categorías se procesan automáticamente desde Google Sheets.
+          </p>
+          <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-blue-800 text-sm">
+              <strong>💡 Tip:</strong> Asegúrate de que cada venta tenga una categoría asignada en la columna E
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Revenue mix chart data con colores específicos para cada categoría
   const revenueMixData = {
@@ -46,7 +79,10 @@ const PortfolioView = ({ allData, formatCurrency }) => {
         'rgba(22, 163, 74, 0.8)',    // SUPLEMENTOS - Verde
         'rgba(249, 115, 22, 0.8)',   // ROPA - Naranja  
         'rgba(168, 85, 247, 0.8)',   // ACCESORIOS - Púrpura
-        'rgba(239, 68, 68, 0.8)'     // Otros - Rojo
+        'rgba(239, 68, 68, 0.8)',    // Otros - Rojo
+        'rgba(245, 158, 11, 0.8)',   // Amarillo
+        'rgba(20, 184, 166, 0.8)',   // Teal
+        'rgba(139, 92, 246, 0.8)'    // Violet
       ],
       borderColor: '#ffffff',
       borderWidth: 2
@@ -64,7 +100,10 @@ const PortfolioView = ({ allData, formatCurrency }) => {
         'rgba(22, 163, 74, 0.8)',
         'rgba(249, 115, 22, 0.8)',
         'rgba(168, 85, 247, 0.8)',
-        'rgba(239, 68, 68, 0.8)'
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(20, 184, 166, 0.8)',
+        'rgba(139, 92, 246, 0.8)'
       ],
       borderColor: '#ffffff',
       borderWidth: 2
@@ -99,6 +138,21 @@ const PortfolioView = ({ allData, formatCurrency }) => {
 
   return (
     <div>
+      {/* ✅ MOSTRAR ESTADO DE DATOS */}
+      <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+        <div className="flex items-center">
+          <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+          <div>
+            <p className="font-semibold text-green-800 text-sm">
+              📊 Datos de categorías conectados desde Google Sheets
+            </p>
+            <p className="text-green-700 text-xs mt-1">
+              {portfolioData.length} categorías procesadas • {ventasDetalladas.length} ventas analizadas
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Resumen KPI */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         {portfolioData.map((item, index) => (
@@ -118,13 +172,7 @@ const PortfolioView = ({ allData, formatCurrency }) => {
         <div className="bg-white p-6 rounded-2xl shadow-lg">
           <h3 className="text-xl font-bold text-gray-800 mb-4">Composición de Ingresos por Categoría</h3>
           <div className="relative h-96">
-            {portfolioData.length > 0 ? (
-              <Doughnut data={revenueMixData} options={chartOptions} />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">No hay datos de categorías disponibles</p>
-              </div>
-            )}
+            <Doughnut data={revenueMixData} options={chartOptions} />
           </div>
         </div>
 
@@ -135,7 +183,12 @@ const PortfolioView = ({ allData, formatCurrency }) => {
               <Doughnut data={profitMixData} options={chartOptions} />
             ) : (
               <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">No hay datos de utilidad por categoría</p>
+                <div className="text-center">
+                  <p className="text-gray-500 text-lg">No hay datos de utilidad por categoría</p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Verifica que la columna Q (UTILIDAD) contenga datos válidos
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -258,12 +311,35 @@ const PortfolioView = ({ allData, formatCurrency }) => {
             <h4 className="font-semibold text-purple-800 mb-2">💰 Rentabilidad</h4>
             <p className="text-sm text-gray-700">
               Margen promedio: <strong>
-                {(portfolioData.reduce((sum, item) => sum + item.margin, 0) / portfolioData.length).toFixed(1)}%
+                {portfolioData.length > 0 ? 
+                  (portfolioData.reduce((sum, item) => sum + item.margin, 0) / portfolioData.length).toFixed(1) : 
+                  '0'
+                }%
               </strong>
               {portfolioData.find(item => item.margin > 20) ? ' - Excelente rentabilidad' : ' - Revisar costos'}
             </p>
           </div>
         </div>
+      </div>
+
+      {/* ✅ DEBUG INFO */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-8">
+        <details>
+          <summary className="cursor-pointer font-medium text-gray-700">
+            🔧 Información de Debug - Categorías
+          </summary>
+          <div className="mt-4 space-y-2">
+            <div className="bg-white p-3 rounded">
+              <h5 className="font-semibold text-gray-800 mb-2">📊 Datos procesados:</h5>
+              <div className="text-sm text-gray-600 space-y-1">
+                <p>• Total categorías: {portfolioData.length}</p>
+                <p>• Ventas detalladas: {ventasDetalladas.length}</p>
+                <p>• Categorías: {Object.keys(ventasPorCategoria).join(', ')}</p>
+                <p>• Total revenue: {formatCurrency(totalRevenue)}</p>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   );
